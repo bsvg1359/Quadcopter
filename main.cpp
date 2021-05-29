@@ -5,8 +5,8 @@
 #include "FXOS8700.h" 
 #include "rtos.h"
 #include "kalman.c"
-#include "arm_math.h"
 using namespace std;
+
 
 #define Rad2Dree 57.295779513082320876798154814105f
 #define PID_ROLL_KP 0.0245f
@@ -15,8 +15,10 @@ using namespace std;
 #define PID_PITCH_KP 0.0245f
 #define PID_PITCH_KI 0.000175f
 #define PID_PITCH_KD 0.0f
+#define PI 3.141592653589793238f
 #define ROLL_SP PI/2
 #define PITCH_SP PI/2
+#define BLUETOOTH_BUAD_RATE 9600
 
 bool CALIBRATE_ESC = True;  // Make this variable "True" when when esc calibration is needed "False" otherwise
 bool STOP_FLAG = True;
@@ -33,9 +35,9 @@ PwmOut ESC3(PTD2); // ESC3 is Rear Left
 PwmOut ESC4(PTD0); // ESC4 is Rear Right 
 DigitalIn sw2(SW2);
 DigitalIn sw3(SW3);
-Serial pc(USBTX,USBRX); // Defining serial output to print in tera term
-Serial bt_serial(PTC15, PTC14);
-
+BufferedSerial pc(USBTX,USBRX); // Defining serial output to print in tera term
+BufferedSerial bt_serial(PTC15, PTC14, BLUETOOTH_BUAD_RATE);
+Thread thread;
 // Initialize pins for I2C communication for sensors. Set jumpers J6,J7 in FRDM-STBC-AGM01 board accordingly.
 // The J6 and J7 jumoer pins must be set to SDA1 and SCL1 to read from FRDM-STBC-AGM01 insetad of onboard sensors.
 FXOS8700 accel(D14,D15);
@@ -67,7 +69,7 @@ void arm_pid_init_f32(
   S->A0 = S->Kp + S->Ki + S->Kd;
 
   /* Derived coefficient A1 */
-  S->A1 = (-S->Kp) - ((float32_t) 2.0 * S->Kd);
+  S->A1 = (-S->Kp) - ((float_t) 2.0 * S->Kd);
 
   /* Derived coefficient A2 */
   S->A2 = S->Kd;
@@ -76,7 +78,7 @@ void arm_pid_init_f32(
   if(resetStateFlag)
   {
     /* Clear the state buffer.  The size will be always 3 samples */
-    memset(S->state, 0, 3u * sizeof(float32_t));
+    memset(S->state, 0, 3u * sizeof(float_t));
   }
 
 }
@@ -93,7 +95,7 @@ void esc_start(void)
         ESC2 = ESC2 + 0.001f;
         ESC3 = ESC3 + 0.001f;
         ESC4 = ESC4 + 0.001f;
-        ThisThread::sleep_for(1);
+        ThisThread::sleep_for(1s);
     }
 }
 
@@ -113,29 +115,28 @@ void print_sensor_data(void const *argument)
     
     gyro.acquire_gyro_data_dps(gyro_data);
     printf("Gyro X:%4.2f,\tGyro Y:%4.2f,\tGyro Z:%4.2f\r\n",gyro_data[0],gyro_data[1],gyro_data[2]);
-    ThisThread::sleep_for(1);
+    ThisThread::sleep_for(1s);
     }
 }
 
 // Thread to fetch the input controls for the quadcopter
-void blue_control(void const *argument)
+void blue_control()
 {
     //Code to control the quadcopter using bluetooth
-    bt_serial.printf("***Initializing BLuetooth Control***");
+    printf("***Initializing BLuetooth Control***");
     char ch = 'n'; 
-    bt_serial.baud(9600);
     int count =0;
     while(True)
     {
-        ThisThread::sleep_for(1.0f);
-        ch = bt_serial.getc();
+        ThisThread::sleep_for(1s);
+        bt_serial.read(&ch, sizeof(ch));
         printf("This is the response %c\n", ch);
         
         switch(ch)
         {
             case 'w':
             {
-                bt_serial.printf("Comming here %d", count);
+                printf("Comming here %d", count);
                 count = count + 1;
                 START_FLAG = True;
                 STOP_FLAG = False;
@@ -155,7 +156,7 @@ void blue_control(void const *argument)
                     ESC4 = MAX_DUTY_CYCLE;
                         
                 }
-                bt_serial.printf("\r\nThrottle is currently at %3.1f%% \r\n",((ESC1- MIN_DUTY_CYCLE)/(MAX_DUTY_CYCLE - MIN_DUTY_CYCLE))*100);
+                printf("\r\nThrottle is currently at %3.1f%% \r\n",((ESC1- MIN_DUTY_CYCLE)/(MAX_DUTY_CYCLE - MIN_DUTY_CYCLE))*100);
                 break;
             }
             case 's':
@@ -176,7 +177,7 @@ void blue_control(void const *argument)
                     ESC4 = MIN_DUTY_CYCLE;
                         
                 }
-                bt_serial.printf("\r\nThrottle is currently at %3.1f%% \r\n",((ESC1- MIN_DUTY_CYCLE)/(MAX_DUTY_CYCLE - MIN_DUTY_CYCLE))*100);
+                printf("\r\nThrottle is currently at %3.1f%% \r\n",((ESC1- MIN_DUTY_CYCLE)/(MAX_DUTY_CYCLE - MIN_DUTY_CYCLE))*100);
                 break;
                 
             }
@@ -188,7 +189,7 @@ void blue_control(void const *argument)
                 ESC2 = MIN_DUTY_CYCLE;
                 ESC3 = MIN_DUTY_CYCLE;
                 ESC4 = MIN_DUTY_CYCLE;
-                bt_serial.printf("\r\nThrottle is currently at %3.1f%% \r\n",((ESC1- MIN_DUTY_CYCLE)/(MAX_DUTY_CYCLE - MIN_DUTY_CYCLE))*100);
+                printf("\r\nThrottle is currently at %3.1f%% \r\n",((ESC1- MIN_DUTY_CYCLE)/(MAX_DUTY_CYCLE - MIN_DUTY_CYCLE))*100);
                 break;
             }
             case 'r':
@@ -205,7 +206,7 @@ void blue_control(void const *argument)
 }
 
 // Function to apply the Pitch and Roll to ESC
-float esc_control(float current, float pid, float rate)
+float esc_control(float current, float pid, float rate=0.0f)
 {
     if ((current + pid+ rate) > MAX_DUTY_CYCLE) return MAX_DUTY_CYCLE;
     else if ((current + pid+ rate) < MIN_DUTY_CYCLE) return MIN_DUTY_CYCLE;
@@ -215,7 +216,8 @@ float esc_control(float current, float pid, float rate)
 int main() 
 {   
     printf("Starting");
-    Thread bc(blue_control);
+    thread.start(callback(blue_control));
+    
     // Instantiating PID controller
     arm_pid_instance_f32 RPID;
     arm_pid_instance_f32 PPID;
@@ -255,16 +257,16 @@ int main()
     esc_start();
     
     ProgramTimer.start();
-    timer = ProgramTimer.read_us();
+    timer = ProgramTimer.elapsed_time().count();
     while(START_FLAG)
     {
         accel.acquire_accel_data_g(accel_data);
         mag.acquire_mag_data_uT(mag_data);
         gyro.acquire_gyro_data_dps(gyro_data);
         R = sqrt(std::pow(accel_data[0], 2) + std::pow(accel_data[1], 2) + std::pow(accel_data[2], 2));
-        kalman_predict(&filter_pitch, gyro_data[0], (ProgramTimer.read_us() - timer));
+        kalman_predict(&filter_pitch, gyro_data[0], (ProgramTimer.elapsed_time().count() - timer));
         kalman_update(&filter_pitch, acos(accel_data[0]/R));
-        kalman_predict(&filter_roll, gyro_data[1], (ProgramTimer.read_us() - timer));
+        kalman_predict(&filter_roll, gyro_data[1], (ProgramTimer.elapsed_time().count() - timer));
         kalman_update(&filter_roll, acos(accel_data[1]/R));
         angle[0] = kalman_get_angle(&filter_pitch);
         angle[1] = kalman_get_angle(&filter_roll);
@@ -298,20 +300,20 @@ int main()
         pitch = arm_pid_f32(&PPID, pitch_error);
         roll = arm_pid_f32(&RPID, roll_error);
         
-        timer = ProgramTimer.read_us();
+        timer = ProgramTimer.elapsed_time().count();
         
         if (!STOP_FLAG)
         {
-            ESC1 = esc_control(ESC1, -pitch/2, 0.0f);
-            ESC2 = esc_control(ESC2, -pitch/2, 0.0f);
-            ESC1 = esc_control(ESC1, -roll/2, 0.0f);
-            ESC3 = esc_control(ESC3, -roll/2, 0.0f);
-            ESC2 = esc_control(ESC2, roll/2, 0.0f);
-            ESC4 = esc_control(ESC4, roll/2, 0.0f);
-            ESC3 = esc_control(ESC3, pitch/2, 0.0f);
-            ESC4 = esc_control(ESC4, pitch/2, 0.0f);
+            ESC1 = esc_control(ESC1, -pitch/2);
+            ESC2 = esc_control(ESC2, -pitch/2);
+            ESC1 = esc_control(ESC1, -roll/2);
+            ESC3 = esc_control(ESC3, -roll/2);
+            ESC2 = esc_control(ESC2, roll/2);
+            ESC4 = esc_control(ESC4, roll/2);
+            ESC3 = esc_control(ESC3, pitch/2);
+            ESC4 = esc_control(ESC4, pitch/2);
         }
-        ThisThread::sleep_for(0.02f);
+        ThisThread::sleep_for(20ms);
     }
     
 }

@@ -33,7 +33,7 @@ void esc_calibration(void)
                printf("\r\n End of Calibration \r\n");
                printf("\r\n Press button SW3 to test the motor min max range\r\n ");
                sw2_press_count = 2;
-               ThisThread::sleep_for(2.0f);
+               ThisThread::sleep_for(2s);
             }
             if (sw2_press_count==0) // Setting max duty cycle
             {
@@ -43,7 +43,7 @@ void esc_calibration(void)
                ESC4 = MAX_DUTY_CYCLE; // Setting the max duty cycle for the ESC for calibration
                printf("\r\n 1)Connect the battery\r\n 2)Press SW2 after 2 beeps from motor \r\n");
                sw2_press_count = 1;
-               ThisThread::sleep_for(2.0f);
+               ThisThread::sleep_for(2s);
             }
         }
         if(sw3==0)
@@ -55,7 +55,7 @@ void esc_calibration(void)
                 ESC2 = val;
                 ESC3 = val;
                 ESC4 = val;
-                ThisThread::sleep_for(1.0f);
+                ThisThread::sleep_for(1s);
             }    
                 
             for(val = MAX_DUTY_CYCLE; val >= MIN_DUTY_CYCLE; val-=0.01f)
@@ -65,7 +65,7 @@ void esc_calibration(void)
                 ESC2 = val;
                 ESC3 = val;
                 ESC4 = val;
-                ThisThread::sleep_for(1.0f);
+                ThisThread::sleep_for(1s);
             }  
             printf("\r\n End of of min max range test\r\n ");
             break;
