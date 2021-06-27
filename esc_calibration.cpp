@@ -2,6 +2,7 @@
 Need USB power to run this funciton
 */
 #include "quadcopter.h"
+
 int sw2_press_count=0;
 extern PwmOut ESC1; // ESC1 is Front Left 
 extern PwmOut ESC2; // ESC2 is Front Right 
@@ -33,7 +34,7 @@ void esc_calibration(void)
                printf("\r\n End of Calibration \r\n");
                printf("\r\n Press button SW3 to test the motor min max range\r\n ");
                sw2_press_count = 2;
-               wait(2.0f);
+               ThisThread::sleep_for(std::chrono::seconds(2));
             }
             if (sw2_press_count==0) // Setting max duty cycle
             {
@@ -43,7 +44,7 @@ void esc_calibration(void)
                ESC4 = MAX_DUTY_CYCLE; // Setting the max duty cycle for the ESC for calibration
                printf("\r\n 1)Connect the battery\r\n 2)Press SW2 after 2 beeps from motor \r\n");
                sw2_press_count = 1;
-               wait(2.0f);
+               ThisThread::sleep_for(std::chrono::seconds(2));
             }
         }
         if(sw3==0)
@@ -55,7 +56,7 @@ void esc_calibration(void)
                 ESC2 = val;
                 ESC3 = val;
                 ESC4 = val;
-                wait(1.0f);
+                ThisThread::sleep_for(std::chrono::seconds(1));
             }    
                 
             for(val = MAX_DUTY_CYCLE; val >= MIN_DUTY_CYCLE; val-=0.01f)
@@ -65,7 +66,7 @@ void esc_calibration(void)
                 ESC2 = val;
                 ESC3 = val;
                 ESC4 = val;
-                wait(1.0f);
+                ThisThread::sleep_for(std::chrono::seconds(1));
             }  
             printf("\r\n End of of min max range test\r\n ");
             break;

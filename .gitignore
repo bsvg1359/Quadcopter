@@ -56,8 +56,9 @@ dkms.conf
 .mbed
 projectfiles
 *.py*
-mbed-os
 BUILD
 
 FXOS8700
 FXAS21002
+mbed-os
+mbed-dsp
