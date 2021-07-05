@@ -17,7 +17,6 @@ void esc_calibration(void)
     ESC2 = 0.00f; // Setting the min duty cycle for the ESC to appropriate percentage
     ESC3 = 0.00f; // Setting the min duty cycle for the ESC to appropriate percentage
     ESC4 = 0.00f; // Setting the min duty cycle for the ESC to appropriate percentage 
-    float val = 0;
     printf("\r\n Starting ESC Calibration\r\n  !!!! REMOVE THE PROPELLERS AND DISCONNECT THE BATTERY BEFORE PROCEDING FURTHER !!!!\r\n");        
     printf("\r\n Press SW2 to set max duty cycle for calibration \r\n");
     while(True)
@@ -49,9 +48,9 @@ void esc_calibration(void)
         }
         if(sw3==0)
         {
-            for(val = MIN_DUTY_CYCLE; val <= MAX_DUTY_CYCLE; val+=0.01f)
+            for(float val = MIN_DUTY_CYCLE; val <= MAX_DUTY_CYCLE; val+=0.01f)
             {
-                printf("\r\nThis the the duty cycle %f\r\n\r\n", val);
+                printf("\r\nThis the the duty cycle %f \r\n\r\n", val);
                 ESC1 = val;
                 ESC2 = val;
                 ESC3 = val;
@@ -59,7 +58,7 @@ void esc_calibration(void)
                 ThisThread::sleep_for(std::chrono::seconds(1));
             }    
                 
-            for(val = MAX_DUTY_CYCLE; val >= MIN_DUTY_CYCLE; val-=0.01f)
+            for(float val = MAX_DUTY_CYCLE; val >= MIN_DUTY_CYCLE; val-=0.01f)
             {
                 printf("\r\nThis the the duty cycle %f\r\n\r\n", val);
                 ESC1 = val;

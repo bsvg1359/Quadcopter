@@ -34,7 +34,6 @@ PwmOut ESC3(PTD2); // ESC3 is Rear Left
 PwmOut ESC4(PTD0); // ESC4 is Rear Right 
 DigitalIn sw2(SW2);
 DigitalIn sw3(SW3);
-BufferedSerial pc(USBTX,USBRX); // Defining serial output to print in tera term
 BufferedSerial bt_serial(PTC15, PTC14);
 
 // Initialize pins for I2C communication for sensors. Set jumpers J6,J7 in FRDM-STBC-AGM01 board accordingly.
@@ -98,21 +97,23 @@ void print_sensor_data(void const *argument)
 void blue_control()
 {
     //Code to control the quadcopter using bluetooth
-    // bt_serial.printf("***Initializing BLuetooth Control***");
-    char ch; 
+    printf("\r\n***Initializing BLuetooth Control***\r\n");
+    char ch;
+    char* buffer = &ch; 
     bt_serial.set_baud(9600);
     int count =0;
     while(True)
     {
         ThisThread::sleep_for(std::chrono::seconds(1));
-        bt_serial.read(&ch, sizeof(ch));
-        printf("This is the response %c\n", ch);
+        bt_serial.read(buffer, sizeof(ch));
+
+        printf("This is buffer %c", *buffer);
         
         switch(ch)
         {
             case 'w':
             {
-                // bt_serial.printf("Comming here %d", count);
+                // printf("Comming here %d", count);
                 count = count + 1;
                 START_FLAG = True;
                 STOP_FLAG = False;
@@ -132,7 +133,7 @@ void blue_control()
                     ESC4 = MAX_DUTY_CYCLE;
                         
                 }
-                // bt_serial.printf("\r\nThrottle is currently at %3.1f%% \r\n",((ESC1- MIN_DUTY_CYCLE)/(MAX_DUTY_CYCLE - MIN_DUTY_CYCLE))*100);
+                printf("\r\nThrottle is currently at %3.1f%% \r\n",((ESC1- MIN_DUTY_CYCLE)/(MAX_DUTY_CYCLE - MIN_DUTY_CYCLE))*100);
                 break;
             }
             case 's':
@@ -153,7 +154,7 @@ void blue_control()
                     ESC4 = MIN_DUTY_CYCLE;
                         
                 }
-                // bt_serial.printf("\r\nThrottle is currently at %3.1f%% \r\n",((ESC1- MIN_DUTY_CYCLE)/(MAX_DUTY_CYCLE - MIN_DUTY_CYCLE))*100);
+                printf("\r\nThrottle is currently at %3.1f%% \r\n",((ESC1- MIN_DUTY_CYCLE)/(MAX_DUTY_CYCLE - MIN_DUTY_CYCLE))*100);
                 break;
                 
             }
@@ -165,7 +166,7 @@ void blue_control()
                 ESC2 = MIN_DUTY_CYCLE;
                 ESC3 = MIN_DUTY_CYCLE;
                 ESC4 = MIN_DUTY_CYCLE;
-                // bt_serial.printf("\r\nThrottle is currently at %3.1f%% \r\n",((ESC1- MIN_DUTY_CYCLE)/(MAX_DUTY_CYCLE - MIN_DUTY_CYCLE))*100);
+                printf("\r\nThrottle is currently at %3.1f%% \r\n",((ESC1- MIN_DUTY_CYCLE)/(MAX_DUTY_CYCLE - MIN_DUTY_CYCLE))*100);
                 break;
             }
             case 'r':
@@ -191,7 +192,7 @@ float esc_control(float current, float pid, float rate)
 
 int main() 
 {   
-    printf("Starting");
+    printf("\r\n Starting \r\n");
     Thread thread;
     thread.start(callback(blue_control));
     // Instantiating PID controller
@@ -224,18 +225,21 @@ int main()
     ESC2 = MIN_DUTY_CYCLE;
     ESC3 = MIN_DUTY_CYCLE;
     ESC4 = MIN_DUTY_CYCLE;
+
     
     // Initialize accelerometer, Magnetometer and Gyrosope 
     accel.accel_config();
     mag.mag_config();
     gyro.gyro_config();
     
-    esc_start();
+
     
     ProgramTimer.start();
     timer = ProgramTimer.elapsed_time().count();
+
     while(START_FLAG)
     {
+        esc_start();
         accel.acquire_accel_data_g(accel_data);
         mag.acquire_mag_data_uT(mag_data);
         gyro.acquire_gyro_data_dps(gyro_data);
