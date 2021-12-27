@@ -74,6 +74,21 @@ void esc_start(void)
     }
 }
 
+// Function to clear bluetooth serial buffer
+// We are observing that when we transmit one charactor from bluetooth transmitter
+// we are receiving the charector twice on receiver side so we need to
+// use this function below to flush any extra charectors received at the serial port.
+void flushBluetoothSerialBuffer(void)
+{
+    char char1;
+    char* buffer = &char1;
+    while (bt_serial.readable())
+    {
+        bt_serial.read(buffer, sizeof(char1));
+    }
+    return;
+}
+
 // Thread(s)
 // Thread to print sensor data
 void print_sensor_data(void const *argument) 
@@ -135,6 +150,7 @@ void blue_control()
                         
                 }
                 printf("\r\nThrottle is currently at %3.1f%% \r\n",((ESC1- MIN_DUTY_CYCLE)/(MAX_DUTY_CYCLE - MIN_DUTY_CYCLE))*100);
+                flushBluetoothSerialBuffer();
                 break;
             }
             case 's':
@@ -156,6 +172,7 @@ void blue_control()
                         
                 }
                 printf("\r\nThrottle is currently at %3.1f%% \r\n",((ESC1- MIN_DUTY_CYCLE)/(MAX_DUTY_CYCLE - MIN_DUTY_CYCLE))*100);
+                flushBluetoothSerialBuffer();
                 break;
                 
             }
@@ -168,11 +185,13 @@ void blue_control()
                 ESC3 = MIN_DUTY_CYCLE;
                 ESC4 = MIN_DUTY_CYCLE;
                 printf("\r\nThrottle is currently at %3.1f%% \r\n",((ESC1- MIN_DUTY_CYCLE)/(MAX_DUTY_CYCLE - MIN_DUTY_CYCLE))*100);
+                flushBluetoothSerialBuffer();
                 break;
             }
             case 'r':
             {
                 STOP_FLAG = False;
+                flushBluetoothSerialBuffer();
                 break;    
             }
             default:
