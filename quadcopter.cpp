@@ -59,6 +59,7 @@ unsigned long timer;
 
 void esc_start(void) 
 {
+    START_FLAG = True;
     ESC1 = MIN_DUTY_CYCLE;
     ESC2 = MIN_DUTY_CYCLE;
     ESC3 = MIN_DUTY_CYCLE;
@@ -141,10 +142,10 @@ void blue_control()
                 // Throttle down
                 if (ESC1 - 0.005f > MIN_DUTY_CYCLE)
                 {
-                    ESC1 = ESC1 - 0.005f;
-                    ESC2 = ESC2 - 0.005f;
-                    ESC3 = ESC3 - 0.005f;
-                    ESC4 = ESC4 - 0.005f;
+                    ESC1 = ESC1 - 0.001f;
+                    ESC2 = ESC2 - 0.001f;
+                    ESC3 = ESC3 - 0.001f;
+                    ESC4 = ESC4 - 0.001f;
                 }
                 else
                 {
@@ -237,9 +238,30 @@ int main()
     ProgramTimer.start();
     timer = ProgramTimer.elapsed_time().count();
 
+    // Start ESC with minimum ESC command to spin the motors
+    esc_start();
+
+    // Testing motors using manual commands to ESC using buttons on FRDM k64f board
+    // while(True){
+    //     if(sw2==0){
+    //         ESC1 = ESC1 + 0.005f;
+    //         ESC2 = ESC2 + 0.005f;
+    //         ESC3 = ESC3 + 0.005f;
+    //         ESC4 = ESC4 + 0.005f;
+    //         ThisThread::sleep_for(std::chrono::milliseconds(1000));
+    //     }
+    //     if(sw3==0){
+    //         ESC1 = ESC1 - 0.005f;
+    //         ESC2 = ESC2 - 0.005f;
+    //         ESC3 = ESC3 - 0.005f;
+    //         ESC4 = ESC4 - 0.005f;
+    //         ThisThread::sleep_for(std::chrono::milliseconds(1000));
+    //     }
+    //     ThisThread::sleep_for(std::chrono::milliseconds(20));
+    // }
+
     while(START_FLAG)
     {
-        esc_start();
         accel.acquire_accel_data_g(accel_data);
         mag.acquire_mag_data_uT(mag_data);
         gyro.acquire_gyro_data_dps(gyro_data);
